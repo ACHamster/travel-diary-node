@@ -59,14 +59,17 @@ export class AuthService {
     return this.userRepository.save(newUser);
   }
 
-  async signIn(user: SignInDTO, response: Response) {
+  async signIn(user: SignInDTO) {
     const { email, username, password } = user;
     const emailValue = email ?? '';
     const usernameValue = username ?? '';
-    const existingUser = await this.usersService.findByEmail(emailValue) || await this.usersService.findByUsername(usernameValue);
+    const existingUser = await this.usersService.findByEmail(emailValue) ||
+      await this.usersService.findByUsername(usernameValue);
+
     if (!existingUser) {
       throw new UnauthorizedException('用户不存在');
     }
+
     const isEqual = await this.hashingService.compare(password, existingUser.password);
     if (!isEqual) {
       throw new UnauthorizedException('密码错误');
@@ -74,25 +77,16 @@ export class AuthService {
 
     const { access_token, refresh_token } = await this.generateTokens(existingUser);
 
-    response.cookie('access_token', access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: this.jwtConfiguration.accessTokenTtl,
-      expires: new Date(Date.now() + 60 * 60 * 1000)
-    });
-
-    response.cookie('refresh_token', refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      expires: new Date(Date.now() + this.jwtConfiguration.refreshTokenTtl * 1000)
-    });
-
     return {
       message: '登录成功',
-      user: {
-        id: existingUser.id,
-        username: existingUser.username,
-        email: existingUser.email
+      data: {
+        token: access_token,           // 改为直接返回token
+        refreshToken: refresh_token,   // 改为直接返回refresh token
+        userInfo: {
+          id: existingUser.id,
+          username: existingUser.username,
+          email: existingUser.email
+        }
       }
     };
   }
@@ -140,7 +134,7 @@ export class AuthService {
     )
   }
 
-  async refreshTokens(refreshToken: string, response: Response) {
+  async refreshTokens(refreshToken: string) {
     try {
       // 验证刷新令牌
       const storedToken = await this.refreshTokenRepository.findOne({
@@ -157,17 +151,17 @@ export class AuthService {
       // 删除旧的刷新令牌
       await this.refreshTokenRepository.remove(storedToken);
 
-      response.cookie('access_token', access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        expires: new Date(Date.now() + this.jwtConfiguration.accessTokenTtl * 1000)
-      });
-
-      response.cookie('refresh_token', refresh_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        expires: new Date(Date.now() + this.jwtConfiguration.refreshTokenTtl * 1000)
-      });
+      // response.cookie('access_token', access_token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === 'production',
+      //   expires: new Date(Date.now() + this.jwtConfiguration.accessTokenTtl * 1000)
+      // });
+      //
+      // response.cookie('refresh_token', refresh_token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === 'production',
+      //   expires: new Date(Date.now() + this.jwtConfiguration.refreshTokenTtl * 1000)
+      // });
 
       return {
         message: '令牌刷新成功',
@@ -175,9 +169,12 @@ export class AuthService {
           id: storedToken.user.id,
           username: storedToken.user.username,
           email: storedToken.user.email
-        }
+        },
+        token: access_token,
+        refreshToken: refresh_token,
       };
     } catch (_error) {
+      console.log(_error);
       throw new UnauthorizedException('无效的刷新令牌');
     }
   }
@@ -190,18 +187,18 @@ export class AuthService {
 
     const { access_token, refresh_token } = await this.generateTokens(user);
 
-    response.cookie('access_token', access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: this.jwtConfiguration.accessTokenTtl,
-      expires: new Date(Date.now() + 60 * 60 * 1000)
-    });
-
-    response.cookie('refresh_token', refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      expires: new Date(Date.now() + this.jwtConfiguration.refreshTokenTtl * 1000)
-    });
+    // response.cookie('access_token', access_token, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   maxAge: this.jwtConfiguration.accessTokenTtl,
+    //   expires: new Date(Date.now() + 60 * 60 * 1000)
+    // });
+    //
+    // response.cookie('refresh_token', refresh_token, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   expires: new Date(Date.now() + this.jwtConfiguration.refreshTokenTtl * 1000)
+    // });
 
     return {
       message: 'Passkey 登录成功',
@@ -209,7 +206,9 @@ export class AuthService {
         id: user.id,
         username: user.username,
         email: user.email
-      }
+      },
+      token: access_token,
+      refreshToken: refresh_token,
     };
   }
 

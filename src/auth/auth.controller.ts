@@ -2,7 +2,6 @@ import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common
 import { AuthService } from './auth.service';
 import { SignInDTO, SignUpDTO } from '../features/user/user.type';
 import { Request, Response } from 'express';
-import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { UserGroups } from '../common/decorators/user-group.decorator';
 import { UserGroupGuard } from './guards/user-group.guard';
 import { AccessControl, AccessLevel } from '../common/decorators/access-controll.decorator';
@@ -31,18 +30,17 @@ export class AuthController {
   @AccessControl(AccessLevel.PUBLIC)
   @Post('signin')
   async signIn(@Body() user: SignInDTO, @Res({ passthrough: true }) response: Response) {
-    return await this.authService.signIn(user, response);
+    return await this.authService.signIn(user);
   }
 
   @Post('refresh')
   @AccessControl(AccessLevel.PUBLIC)
-  @UseGuards(RefreshTokenGuard)
+  // @UseGuards(RefreshTokenGuard)
   async refreshTokens(
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response
+    @Body() body: { refreshToken: string },
   ) {
-    const refreshToken = request.cookies['refresh_token'];
-    return this.authService.refreshTokens(refreshToken, response);
+    const refreshToken = body.refreshToken;
+    return this.authService.refreshTokens(refreshToken);
   }
 
   @Get('verifyAdmin')
