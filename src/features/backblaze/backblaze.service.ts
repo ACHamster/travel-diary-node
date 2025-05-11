@@ -185,7 +185,6 @@ export class BackblazeService {
 
       const fileExist = await this.OssArchiveService.isFileExist(sha1);
       if (fileExist != null) {
-        console.log("fileExist");
         return {
           fileName: fileExist.file_name,
           contentSha1: fileExist.sha1,
@@ -490,3 +489,4 @@ export class BackblazeService {
     }
   }
 }
+

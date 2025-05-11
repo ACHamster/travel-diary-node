@@ -14,11 +14,20 @@ export class OssArchiveController {
     return await this.ossArchiveService.getAllFiles();
   }
 
+
+
   @AccessControl(AccessLevel.PUBLIC)
   @Post('delete')
   async deleteFile(@Body('data') body: { id: number; fileName: string }) {
     const id = body.id;
     const fileName =body.fileName;
     return await this.ossArchiveService.deleteFile(id, fileName);
+  }
+
+  @AccessControl(AccessLevel.PUBLIC)
+  @Post('exist')
+  async isFileExist(@Body() body: { sha1: string }) {
+    const sha1 = body.sha1;
+    return await this.ossArchiveService.isFileExist(sha1);
   }
 }

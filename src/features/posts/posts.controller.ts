@@ -1,16 +1,6 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-  UseGuards
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDTO, UpdatePostAuditDTO } from './posts.type';
-import { Public } from '../../common/decorators/public.decorator';
 import { AccessControl, AccessLevel } from '../../common/decorators/access-controll.decorator';
 import { UserGroupGuard } from '../../auth/guards/user-group.guard';
 import { UserGroups } from '../../common/decorators/user-group.decorator';
@@ -33,14 +23,21 @@ export class PostsController {
   }
 
   @Get('list/approved')
+  @AccessControl(AccessLevel.PUBLIC)
   async getApprovedPosts() {
     return await this.postsService.getApprovedPosts();
   }
 
   @Get('my')
   @UseGuards(AuthGuard)
+  @AccessControl(AccessLevel.PUBLIC)
   async getUserPosts(@RequestUser() user: ActiveUserData) {
     return await this.postsService.getUserPosts(user.sub);
+  }
+
+  @Get('search/by-author/:username')
+  async getPostsByUsername(@Param('username') username: string) {
+    return await this.postsService.getPostsByUsername(username);
   }
 
   @Get(':id')

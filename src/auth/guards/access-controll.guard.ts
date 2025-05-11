@@ -24,7 +24,7 @@ export class AccessControlGuard implements CanActivate {
 
     // 尝试提取和验证token
     try {
-      const token = this.extractTokenFromCookie(request);
+      const token = this.extractToken(request);
       if (token) {
         const jwtConfig = this.configService.get('jwt');
         const payload = await this.jwtService.verifyAsync(token, {
@@ -50,7 +50,19 @@ export class AccessControlGuard implements CanActivate {
     return true;
   }
 
-  private extractTokenFromCookie(request: Request): string | null {
-    return request.cookies?.access_token || null;
+  private extractToken(request: Request): string | null {
+    // 从Cookie中提取Token
+    const cookieToken = request.cookies?.access_token;
+    if (cookieToken) {
+      return cookieToken;
+    }
+
+    // 从Authorization头中提取Bearer Token
+    const authHeader = request.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.slice(7); // 去掉"Bearer "前缀
+    }
+
+    return null;
   }
 }

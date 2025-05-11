@@ -2,6 +2,7 @@ import { Controller, Post, Get, Delete, Param, UploadedFile, UseInterceptors } f
 import { FileInterceptor } from '@nestjs/platform-express';
 import { BackblazeService, B2FileInfo } from './backblaze.service';
 import { Public } from '../../common/decorators/public.decorator';
+import { AccessControl, AccessLevel } from '../../common/decorators/access-controll.decorator';
 
 // 定义上传文件的接口
 interface UploadedFileData {
@@ -18,8 +19,9 @@ export class BackblazeController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
+  @AccessControl(AccessLevel.PUBLIC)
   async uploadFile(@UploadedFile() file: UploadedFileData): Promise<B2FileInfo> {
-    const fileName = `uploads/${file.originalname}`;
+    const fileName = `travel/${file.originalname}`;
 
     // 根据文件大小选择普通上传或大文件上传
     if (file.buffer.length > 5 * 1024 * 1024) { // 5MB
