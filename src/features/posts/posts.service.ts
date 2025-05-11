@@ -1,8 +1,8 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PostEntity, AuditStatus } from '../../entity/posts.entity';
-import { Repository } from 'typeorm';
-import { CreatePostDTO, UpdatePostAuditDTO } from './posts.type';
+import { Repository, Like } from 'typeorm';
+import { CreatePostDTO, UpdatePostAuditDTO, PostResponse } from './posts.type';
 
 @Injectable()
 export class PostsService {
@@ -22,7 +22,6 @@ export class PostsService {
         // 如果存在，执行更新操作
         return this.postsRepository.update(post.id, {
           title: post.title,
-          description: post.description,
           content: JSON.stringify(post.content),
           images: post.images ? JSON.stringify(post.images) : '[]',
           video: post.video,
@@ -35,7 +34,6 @@ export class PostsService {
     // 没有指定ID或ID不存在，创建新记录
     const obj = new PostEntity();
     obj.title = post.title;
-    obj.description = post.description;
     obj.content = JSON.stringify(post.content);
     obj.images = post.images ? JSON.stringify(post.images) : '[]';
     obj.video = post.video || '';
@@ -49,14 +47,13 @@ export class PostsService {
     return await this.postsRepository.save(obj);
   }
 
-  async getAllPosts() {
+  async getAllPosts(): Promise<PostResponse[]> {
     const posts = await this.postsRepository.find({
       relations: ['author'],
       select: {
         id: true,
         title: true,
         created_time: true,
-        description: true,
         images: true,
         video: true,
         auditStatus: true,
@@ -74,18 +71,17 @@ export class PostsService {
       id: post.id.toString(),
       title: post.title,
       date: post.created_time.toISOString(),
-      description: post.description,
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
       video: post.video,
       auditStatus: post.auditStatus,
       author: {
-        id: post.author.id,
+        avatar: post.author.avatar,
         username: post.author.username
       }
     }));
   }
 
-  async getApprovedPosts() {
+  async getApprovedPosts(): Promise<PostResponse[]> {
     const posts = await this.postsRepository.find({
       where: { auditStatus: AuditStatus.APPROVED },
       relations: ['author'],
@@ -93,12 +89,11 @@ export class PostsService {
         id: true,
         title: true,
         created_time: true,
-        description: true,
         images: true,
         video: true,
         auditStatus: true,
         author: {
-          id: true,
+          avatar: true,
           username: true
         }
       },
@@ -111,18 +106,17 @@ export class PostsService {
       id: post.id.toString(),
       title: post.title,
       date: post.created_time.toISOString(),
-      description: post.description,
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
       video: post.video,
       auditStatus: post.auditStatus,
       author: {
-        id: post.author.id,
+        avatar: post.author.avatar,
         username: post.author.username
       }
     }));
   }
 
-  async getUserPosts(userId: number) {
+  async getUserPosts(userId: number): Promise<PostResponse[]> {
     const posts = await this.postsRepository.find({
       where: { authorId: userId },
       relations: ['author'],
@@ -130,7 +124,6 @@ export class PostsService {
         id: true,
         title: true,
         created_time: true,
-        description: true,
         content: true,
         images: true,
         video: true,
@@ -150,20 +143,19 @@ export class PostsService {
       id: post.id.toString(),
       title: post.title,
       date: post.created_time.toISOString(),
-      description: post.description,
       content: JSON.parse(post.content) as Record<string, unknown>,
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
       video: post.video,
       auditStatus: post.auditStatus,
       rejectReason: post.rejectReason,
       author: {
-        id: post.author.id,
+        avatar: post.author.avatar,
         username: post.author.username
       }
     }));
   }
 
-  async getPostById(id: number, currentUserId?: number) {
+  async getPostById(id: number, currentUserId?: number): Promise<PostResponse | null> {
     const post = await this.postsRepository.findOne({
       where: { id },
       relations: ['author'],
@@ -188,8 +180,9 @@ export class PostsService {
       return null;
     }
 
-    // 只有作者本人或文章已审核通过才能查看
     if (post.auditStatus !== AuditStatus.APPROVED && post.authorId !== currentUserId) {
+      console.log(post.auditStatus);
+      console.log('没有权限查看该文章');
       return null;
     }
 
@@ -198,12 +191,12 @@ export class PostsService {
       title: post.title,
       date: post.created_time.toISOString(),
       content: JSON.parse(post.content) as Record<string, unknown>,
-      images: post.images ? (JSON.parse(post.images) as string[]) : [],
+      images: post.images ? JSON.parse(post.images) as string[] : [],
       video: post.video,
       auditStatus: post.auditStatus,
       rejectReason: post.rejectReason,
       author: {
-        id: post.author.id,
+        avatar: post.author.avatar,
         username: post.author.username
       }
     };
@@ -238,4 +231,45 @@ export class PostsService {
     console.log(updateData);
     return await this.postsRepository.update(id, updateData);
   }
+
+  async getPostsByUsername(username: string): Promise<PostResponse[]> {
+    const posts = await this.postsRepository.find({
+      where: {
+        auditStatus: AuditStatus.APPROVED,
+        author: {
+          username: Like(`%${username}%`)
+        }
+      },
+      relations: ['author'],
+      select: {
+        id: true,
+        title: true,
+        created_time: true,
+        images: true,
+        video: true,
+        auditStatus: true,
+        author: {
+          id: true,
+          username: true
+        }
+      },
+      order: {
+        created_time: 'DESC',
+      },
+    });
+
+    return posts.map(post => ({
+      id: post.id.toString(),
+      title: post.title,
+      date: post.created_time.toISOString(),
+      images: post.images ? (JSON.parse(post.images) as string[]) : [],
+      video: post.video,
+      auditStatus: post.auditStatus,
+      author: {
+        avatar: post.author.avatar,
+        username: post.author.username
+      }
+    }));
+  }
 }
+

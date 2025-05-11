@@ -28,3 +28,18 @@ export class UpdatePostAuditDTO {
   status: AuditStatus;
   rejectReason?: string;
 }
+
+export interface PostResponse {
+  id: string;
+  title: string;
+  date: string;
+  content?: Record<string, unknown>;
+  images: string[];
+  video?: string;
+  auditStatus: AuditStatus;
+  rejectReason?: string;
+  author: {
+    avatar: string | undefined,
+    username: string;
+  };
+}

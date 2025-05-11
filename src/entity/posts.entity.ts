@@ -16,6 +16,10 @@ export class PostEntity {
   @Column({ type: 'nvarchar', length: 255 })
   title: string;
 
+  // 添加描述字段
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
+  description: string;
+
   // 存储为JSON字符串
   @Column({ type: 'nvarchar', length: 'max', nullable: true })
   images: string; // 存储图片URL数组的JSON字符串
@@ -23,9 +27,6 @@ export class PostEntity {
   // 添加视频字段
   @Column({ type: 'nvarchar', length: 500, nullable: true })
   video: string; // 视频URL
-
-  @Column({ type: 'nvarchar', length: 255, nullable: true })
-  description: string;
 
   @Column({ type: 'nvarchar', length: 'max', nullable: false })
   content: string;  // 存储 JSON 数据
@@ -41,6 +42,9 @@ export class PostEntity {
   // 添加拒绝原因字段
   @Column({ type: 'nvarchar', length: 500, nullable: true })
   rejectReason: string;
+
+  @Column({ type: 'int', nullable: false, default: 0 })
+  viewCount: number;
 
   // 添加作者关联关系
   @ManyToOne(() => User)
