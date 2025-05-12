@@ -12,6 +12,7 @@ import { ActiveUserData } from '../../auth/interface/active-user-data.interface'
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
+  // 供管理员使用
   @Get('list')
   @AccessControl(AccessLevel.REQUIRED_AUTH)
   // @UseGuards(UserGroupGuard)

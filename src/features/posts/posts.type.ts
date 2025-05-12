@@ -37,8 +37,10 @@ export interface PostResponse {
   images: string[];
   video?: string;
   rejectReason?: string;
+  coverImage?: string; // 添加 coverImage 属性
+  quick_tag?: number;  // 添加 quick_tag 属性
   author: {
-    avatar: string | undefined,
+    avatar: string | undefined;
     username: string;
   };
 }

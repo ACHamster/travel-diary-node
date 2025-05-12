@@ -26,7 +26,7 @@ export class PostsService {
           video: post.video,
           authorId: post.authorId,
           quick_tag: mergeLines(existingPost.quick_tag, PendingLine),
-          coverImage: post.coverImage || '',
+          coverImage: post.coverImage || (post.images && post?.images[0]) || '',
         });
       }
     }
@@ -47,16 +47,22 @@ export class PostsService {
     return await this.postsRepository.save(obj);
   }
 
-  async getAllPosts(): Promise<PostResponse[]> {
+  async getAllPosts(): Promise<{
+    id: string;
+    title: string;
+    date: string;
+    coverImage: string;
+    author: { avatar: string | undefined; username: string }
+  }[]> {
     const posts = await this.postsRepository.find({
       relations: ['author'],
       select: {
         id: true,
         title: true,
         created_time: true,
-        images: true,
-        video: true,
+        coverImage: true,
         quick_tag: true,
+        rejectReason: true,
         author: {
           id: true,
           username: true
@@ -71,8 +77,9 @@ export class PostsService {
       id: post.id.toString(),
       title: post.title,
       date: post.created_time.toISOString(),
-      images: post.images ? (JSON.parse(post.images) as string[]) : [],
-      video: post.video,
+      coverImage: post.coverImage,
+      quickTag: post.quick_tag,
+      rejectReason: post.rejectReason,
       author: {
         avatar: post.author.avatar,
         username: post.author.username
@@ -80,7 +87,14 @@ export class PostsService {
     }));
   }
 
-  async getApprovedPosts(): Promise<PostResponse[]> {
+  async getApprovedPosts(): Promise<{
+    id: string;
+    title: string;
+    date: string;
+    coverImage: string;
+    quickTag: number;
+    author: { avatar: string | undefined; username: string }
+  }[]> {
     const posts = await this.postsRepository.find({
       where: {
         quick_tag: Raw(alias => `${alias} & ${ApprovedLine} = ${ApprovedLine}`)
@@ -90,8 +104,6 @@ export class PostsService {
         id: true,
         title: true,
         created_time: true,
-        images: true,
-        video: true,
         quick_tag: true,
         coverImage: true,
         author: {
@@ -108,8 +120,6 @@ export class PostsService {
       id: post.id.toString(),
       title: post.title,
       date: post.created_time.toISOString(),
-      images: post.images ? (JSON.parse(post.images) as string[]) : [],
-      video: post.video,
       coverImage: post.coverImage,
       quickTag: post.quick_tag,
       author: {
@@ -172,6 +182,7 @@ export class PostsService {
         quick_tag: true,
         rejectReason: true,
         authorId: true,
+        coverImage: true,
         author: {
           id: true,
           username: true
@@ -196,6 +207,8 @@ export class PostsService {
       images: post.images ? JSON.parse(post.images) as string[] : [],
       video: post.video,
       rejectReason: post.rejectReason,
+      coverImage: post.coverImage,
+      quick_tag: post.quick_tag,
       author: {
         avatar: post.author.avatar,
         username: post.author.username
