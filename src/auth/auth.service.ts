@@ -7,7 +7,6 @@ import { User } from '../entity/user.entity';
 import { HashingService } from './hashing.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ActiveUserData } from './interface/active-user-data.interface';
-import { Response } from 'express';
 import jwtConfig from '../config/jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { RefreshToken } from '../entity/refresh-tokens.entity';
@@ -63,8 +62,7 @@ export class AuthService {
     const { email, username, password } = user;
     const emailValue = email ?? '';
     const usernameValue = username ?? '';
-    const existingUser = await this.usersService.findByEmail(emailValue) ||
-      await this.usersService.findByUsername(usernameValue);
+    const existingUser = await this.usersService.findUserByEmailOrUsername(emailValue, usernameValue);
 
     if (!existingUser) {
       throw new UnauthorizedException('用户不存在');
@@ -75,6 +73,11 @@ export class AuthService {
       throw new UnauthorizedException('密码错误');
     }
 
+    const userWithGroup = await this.usersService.findUserById(existingUser.id);
+    if (!userWithGroup) {
+      throw new UnauthorizedException('用户组信息未找到');
+    }
+
     const { access_token, refresh_token } = await this.generateTokens(existingUser);
 
     return {
@@ -83,9 +86,10 @@ export class AuthService {
         token: access_token,           // 改为直接返回token
         refreshToken: refresh_token,   // 改为直接返回refresh token
         userInfo: {
-          id: existingUser.id,
-          username: existingUser.username,
-          email: existingUser.email
+          id: userWithGroup.id,
+          username: userWithGroup.username,
+          email: userWithGroup.email,
+          userGroup: userWithGroup.userGroup?.name || '未分组' // 返回用户组信息
         }
       }
     };
@@ -179,7 +183,7 @@ export class AuthService {
     }
   }
 
-  async generateTokensForUser(userId: number, response: Response) {
+  async generateTokensForUser(userId: number) {
     const user = await this.usersService.findUserById(userId);
     if (!user) {
       throw new UnauthorizedException('用户不存在');
@@ -187,25 +191,13 @@ export class AuthService {
 
     const { access_token, refresh_token } = await this.generateTokens(user);
 
-    // response.cookie('access_token', access_token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production',
-    //   maxAge: this.jwtConfiguration.accessTokenTtl,
-    //   expires: new Date(Date.now() + 60 * 60 * 1000)
-    // });
-    //
-    // response.cookie('refresh_token', refresh_token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production',
-    //   expires: new Date(Date.now() + this.jwtConfiguration.refreshTokenTtl * 1000)
-    // });
-
     return {
-      message: 'Passkey 登录成功',
+      message: '令牌生成成功',
       user: {
         id: user.id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        userGroup: user.userGroup?.name || '未分组' // 返回用户组信息
       },
       token: access_token,
       refreshToken: refresh_token,

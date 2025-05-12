@@ -72,7 +72,7 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
-// 添加用户组相关方法
+  // 添加用户组相关方法
   async createUserGroup(name: string, description?: string): Promise<UserGroup> {
     const group = this.userGroupRepository.create({
       name,
@@ -80,5 +80,14 @@ export class UserService {
     });
 
     return this.userGroupRepository.save(group);
+  }
+
+  async findUserByEmailOrUsername(email: string, username: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: [
+        { email },
+        { username },
+      ],
+    });
   }
 }
