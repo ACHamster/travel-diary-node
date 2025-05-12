@@ -12,16 +12,6 @@ import { ActiveUserData } from '../../auth/interface/active-user-data.interface'
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  @Post()
-  @UseGuards(AuthGuard)
-  async createPost(
-    @RequestUser() user: ActiveUserData,
-    @Body() createPostDto: CreatePostDTO,
-  ) {
-    createPostDto.authorId = user.sub;
-    return this.postsService.createPost(createPostDto);
-  }
-
   @Get('list')
   @AccessControl(AccessLevel.REQUIRED_AUTH)
   // @UseGuards(UserGroupGuard)
@@ -56,6 +46,18 @@ export class PostsController {
   ) {
     return await this.postsService.getPostById(id, user?.sub);
   }
+
+  @Post()
+  @UseGuards(AuthGuard)
+  async createPost(
+    @RequestUser() user: ActiveUserData,
+    @Body() createPostDto: CreatePostDTO,
+  ) {
+    createPostDto.authorId = user.sub;
+    return this.postsService.createPost(createPostDto);
+  }
+
+
 
   @Delete(':id')
   @AccessControl(AccessLevel.REQUIRED_AUTH)

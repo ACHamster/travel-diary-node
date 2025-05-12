@@ -1,8 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PostEntity, AuditStatus } from '../../entity/posts.entity';
-import { Repository, Like } from 'typeorm';
+import { PostEntity } from '../../entity/posts.entity';
+import { Repository, Like, Raw } from 'typeorm';
 import { CreatePostDTO, UpdatePostAuditDTO, PostResponse } from './posts.type';
+import { ApprovedLine, PendingLine, RejectedLine, mergeLines, removeLine, includeSomeLine } from '../../common/lib/quick-tag';
 
 @Injectable()
 export class PostsService {
@@ -12,35 +13,31 @@ export class PostsService {
   ) {}
 
   async createPost(post: CreatePostDTO) {
-    // 检查是否存在相同ID的文章
     if (post.id) {
       const existingPost = await this.postsRepository.findOne({
         where: { id: post.id }
       });
 
       if (existingPost) {
-        // 如果存在，执行更新操作
         return this.postsRepository.update(post.id, {
           title: post.title,
           content: JSON.stringify(post.content),
           images: post.images ? JSON.stringify(post.images) : '[]',
           video: post.video,
           authorId: post.authorId,
-          auditStatus: AuditStatus.PENDING,
+          quick_tag: mergeLines(existingPost.quick_tag, PendingLine),
           coverImage: post.coverImage || '',
         });
       }
     }
 
-    // 没有指定ID或ID不存在，创建新记录
-    console.log(post);
     const obj = new PostEntity();
     obj.title = post.title;
     obj.content = JSON.stringify(post.content);
     obj.images = post.images ? JSON.stringify(post.images) : '[]';
     obj.video = post.video || '';
     obj.authorId = post.authorId;
-    obj.auditStatus = AuditStatus.PENDING;
+    obj.quick_tag = PendingLine;
     obj.coverImage = post.coverImage || '';
 
     if (post.id) {
@@ -59,7 +56,7 @@ export class PostsService {
         created_time: true,
         images: true,
         video: true,
-        auditStatus: true,
+        quick_tag: true,
         author: {
           id: true,
           username: true
@@ -76,7 +73,6 @@ export class PostsService {
       date: post.created_time.toISOString(),
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
       video: post.video,
-      auditStatus: post.auditStatus,
       author: {
         avatar: post.author.avatar,
         username: post.author.username
@@ -86,7 +82,9 @@ export class PostsService {
 
   async getApprovedPosts(): Promise<PostResponse[]> {
     const posts = await this.postsRepository.find({
-      where: { auditStatus: AuditStatus.APPROVED },
+      where: {
+        quick_tag: Raw(alias => `${alias} & ${ApprovedLine} = ${ApprovedLine}`)
+      },
       relations: ['author'],
       select: {
         id: true,
@@ -94,7 +92,7 @@ export class PostsService {
         created_time: true,
         images: true,
         video: true,
-        auditStatus: true,
+        quick_tag: true,
         coverImage: true,
         author: {
           avatar: true,
@@ -112,8 +110,8 @@ export class PostsService {
       date: post.created_time.toISOString(),
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
       video: post.video,
-      auditStatus: post.auditStatus,
       coverImage: post.coverImage,
+      quickTag: post.quick_tag,
       author: {
         avatar: post.author.avatar,
         username: post.author.username
@@ -132,7 +130,7 @@ export class PostsService {
         content: true,
         images: true,
         video: true,
-        auditStatus: true,
+        quick_tag: true,
         rejectReason: true,
         author: {
           id: true,
@@ -150,8 +148,8 @@ export class PostsService {
       date: post.created_time.toISOString(),
       content: JSON.parse(post.content) as Record<string, unknown>,
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
+      quickTag: post.quick_tag,
       video: post.video,
-      auditStatus: post.auditStatus,
       rejectReason: post.rejectReason,
       author: {
         avatar: post.author.avatar,
@@ -171,7 +169,7 @@ export class PostsService {
         content: true,
         images: true,
         video: true,
-        auditStatus: true,
+        quick_tag: true,
         rejectReason: true,
         authorId: true,
         author: {
@@ -185,8 +183,7 @@ export class PostsService {
       return null;
     }
 
-    if (post.auditStatus !== AuditStatus.APPROVED && post.authorId !== currentUserId) {
-      console.log(post.auditStatus);
+    if (!includeSomeLine(post.quick_tag, ApprovedLine) && post.authorId !== currentUserId) {
       console.log('没有权限查看该文章');
       return null;
     }
@@ -198,7 +195,6 @@ export class PostsService {
       content: JSON.parse(post.content) as Record<string, unknown>,
       images: post.images ? JSON.parse(post.images) as string[] : [],
       video: post.video,
-      auditStatus: post.auditStatus,
       rejectReason: post.rejectReason,
       author: {
         avatar: post.author.avatar,
@@ -221,26 +217,36 @@ export class PostsService {
       throw new InternalServerErrorException("没有找到该文章");
     }
 
-    // 如果是拒绝状态，必须提供拒绝原因
-    if (auditData.status === AuditStatus.REJECTED && !auditData.rejectReason) {
+    if (includeSomeLine(auditData.auditStatus, RejectedLine) && !auditData.rejectReason) {
       throw new InternalServerErrorException("拒绝文章时必须提供拒绝原因");
     }
 
-    console.log(auditData.rejectReason);
+    let updatedQuickTag = post.quick_tag;
+    if (includeSomeLine(updatedQuickTag, ApprovedLine)) {
+      updatedQuickTag = removeLine(updatedQuickTag, ApprovedLine);
+    }
+    if (includeSomeLine(updatedQuickTag, PendingLine)) {
+      updatedQuickTag = removeLine(updatedQuickTag, PendingLine);
+    }
+    if (includeSomeLine(updatedQuickTag, RejectedLine)) {
+      updatedQuickTag = removeLine(updatedQuickTag, RejectedLine);
+    }
 
-    const updateData: Partial<PostEntity> = {
-      auditStatus: auditData.status,
-      rejectReason: auditData.status === AuditStatus.REJECTED ? auditData.rejectReason : undefined
-    };
+    if (auditData.rejectReason) {
+      updatedQuickTag = mergeLines(updatedQuickTag, RejectedLine);
+    } else {
+      updatedQuickTag = mergeLines(updatedQuickTag, ApprovedLine);
+    }
 
-    console.log(updateData);
-    return await this.postsRepository.update(id, updateData);
+    return await this.postsRepository.update(id, {
+      quick_tag: updatedQuickTag,
+      rejectReason: auditData.rejectReason,
+    });
   }
 
   async getPostsByUsername(username: string): Promise<PostResponse[]> {
     const posts = await this.postsRepository.find({
       where: {
-        auditStatus: AuditStatus.APPROVED,
         author: {
           username: Like(`%${username}%`)
         }
@@ -252,7 +258,7 @@ export class PostsService {
         created_time: true,
         images: true,
         video: true,
-        auditStatus: true,
+        quick_tag: true,
         author: {
           id: true,
           username: true
@@ -269,7 +275,6 @@ export class PostsService {
       date: post.created_time.toISOString(),
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
       video: post.video,
-      auditStatus: post.auditStatus,
       author: {
         avatar: post.author.avatar,
         username: post.author.username
@@ -277,4 +282,3 @@ export class PostsService {
     }));
   }
 }
-

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { AuditStatus } from '../../entity/posts.entity';
+// import { AuditStatus } from '../../entity/posts.entity';
 
 export class CreatePostDTO {
   @ApiProperty({ description: '文章ID'})
@@ -11,7 +11,7 @@ export class CreatePostDTO {
   @ApiProperty({ description: '文章内容'})
   content: string;
 
-  @ApiProperty({ description: '封面图', required: false })
+  @ApiProperty({ description: '文章封面图', required: false })
   coverImage?: string;
 
   @ApiProperty({ description: '图片数组', required: false })
@@ -25,7 +25,7 @@ export class CreatePostDTO {
 }
 
 export class UpdatePostAuditDTO {
-  status: AuditStatus;
+  auditStatus: number;
   rejectReason?: string;
 }
 
@@ -36,7 +36,6 @@ export interface PostResponse {
   content?: Record<string, unknown>;
   images: string[];
   video?: string;
-  auditStatus: AuditStatus;
   rejectReason?: string;
   author: {
     avatar: string | undefined,

@@ -1,13 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
 
-// 审核状态枚举
-export enum AuditStatus {
-  PENDING = 'pending',   // 待审核
-  APPROVED = 'approved', // 已通过
-  REJECTED = 'rejected'  // 未通过
-}
-
 @Entity('posts')
 export class PostEntity {
   @PrimaryGeneratedColumn()
@@ -16,41 +9,32 @@ export class PostEntity {
   @Column({ type: 'nvarchar', length: 255 })
   title: string;
 
-  // 添加描述字段
   @Column({ type: 'nvarchar', length: 'max', nullable: true })
   description: string;
 
-  // 存储为JSON字符串
   @Column({ type: 'nvarchar', length: 'max', nullable: true })
-  images: string; // 存储图片URL数组的JSON字符串
+  images: string;
 
-  // 添加视频字段
   @Column({ type: 'nvarchar', length: 500, nullable: true })
-  video: string; // 视频URL
+  video: string;
 
-  // 封面图（供视频使用）
   @Column({ type: 'nvarchar', length: 500, nullable: true })
-  coverImage: string; // 封面图URL
+  coverImage: string;
 
   @Column({ type: 'nvarchar', length: 'max', nullable: false })
-  content: string;  // 存储 JSON 数据
+  content: string;
 
-  // 添加审核状态字段
-  @Column({
-    type: 'nvarchar',
-    length: 20,
-    default: AuditStatus.PENDING
-  })
-  auditStatus: AuditStatus;
+  @Column({ type: 'bigint', nullable: false, default: 0 })
+  quick_tag: number;
 
-  // 添加拒绝原因字段
+  // 移除 auditStatus 字段
+  // 保留拒绝原因字段，因为这是文本信息
   @Column({ type: 'nvarchar', length: 500, nullable: true })
   rejectReason: string;
 
   @Column({ type: 'int', nullable: false, default: 0 })
   viewCount: number;
 
-  // 添加作者关联关系
   @ManyToOne(() => User)
   @JoinColumn({ name: 'authorId' })
   author: User;
