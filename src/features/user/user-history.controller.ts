@@ -22,4 +22,12 @@ export class UserHistoryController {
     }
     return this.userHistoryService.getHistory(user.sub.toString());
   }
+
+  @Post('clear')
+  clearHistory(@RequestUser() user: ActiveUserData): void {
+    if (!user?.sub) {
+      throw new Error('User ID not found in request');
+    }
+    this.userHistoryService.clearHistory(user.sub.toString());
+  }
 }

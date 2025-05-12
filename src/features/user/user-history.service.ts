@@ -42,4 +42,12 @@ export class UserHistoryService {
     const history = this.userHistories.get(userId) || [];
     return [...history].reverse(); // 返回倒序的历史记录
   }
+
+  /**
+   * Clear the browsing history of a user.
+   * @param userId The ID of the user.
+   */
+  clearHistory(userId: string): void {
+    this.userHistories.delete(userId);
+  }
 }
