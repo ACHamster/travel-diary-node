@@ -28,6 +28,10 @@ export class PostEntity {
   @Column({ type: 'nvarchar', length: 500, nullable: true })
   video: string; // 视频URL
 
+  // 封面图（供视频使用）
+  @Column({ type: 'nvarchar', length: 500, nullable: true })
+  coverImage: string; // 封面图URL
+
   @Column({ type: 'nvarchar', length: 'max', nullable: false })
   content: string;  // 存储 JSON 数据
 

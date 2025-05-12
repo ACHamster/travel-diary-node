@@ -22,6 +22,14 @@ export class PostsController {
     return this.postsService.createPost(createPostDto);
   }
 
+  @Get('list')
+  @AccessControl(AccessLevel.REQUIRED_AUTH)
+  // @UseGuards(UserGroupGuard)
+  // @UserGroups("admin")
+  async getAllPosts() {
+    return await this.postsService.getAllPosts();
+  }
+
   @Get('list/approved')
   @AccessControl(AccessLevel.PUBLIC)
   async getApprovedPosts() {
@@ -30,7 +38,7 @@ export class PostsController {
 
   @Get('my')
   @UseGuards(AuthGuard)
-  @AccessControl(AccessLevel.PUBLIC)
+  @AccessControl(AccessLevel.REQUIRED_AUTH)
   async getUserPosts(@RequestUser() user: ActiveUserData) {
     return await this.postsService.getUserPosts(user.sub);
   }

@@ -27,11 +27,13 @@ export class PostsService {
           video: post.video,
           authorId: post.authorId,
           auditStatus: AuditStatus.PENDING,
+          coverImage: post.coverImage || '',
         });
       }
     }
 
     // 没有指定ID或ID不存在，创建新记录
+    console.log(post);
     const obj = new PostEntity();
     obj.title = post.title;
     obj.content = JSON.stringify(post.content);
@@ -39,6 +41,7 @@ export class PostsService {
     obj.video = post.video || '';
     obj.authorId = post.authorId;
     obj.auditStatus = AuditStatus.PENDING;
+    obj.coverImage = post.coverImage || '';
 
     if (post.id) {
       obj.id = post.id;
@@ -92,6 +95,7 @@ export class PostsService {
         images: true,
         video: true,
         auditStatus: true,
+        coverImage: true,
         author: {
           avatar: true,
           username: true
@@ -109,6 +113,7 @@ export class PostsService {
       images: post.images ? (JSON.parse(post.images) as string[]) : [],
       video: post.video,
       auditStatus: post.auditStatus,
+      coverImage: post.coverImage,
       author: {
         avatar: post.author.avatar,
         username: post.author.username

@@ -11,8 +11,8 @@ export class CreatePostDTO {
   @ApiProperty({ description: '文章内容'})
   content: string;
 
-  @ApiProperty({ description: '文章描述'})
-  description: string;
+  @ApiProperty({ description: '封面图', required: false })
+  coverImage?: string;
 
   @ApiProperty({ description: '图片数组', required: false })
   images?: string[];

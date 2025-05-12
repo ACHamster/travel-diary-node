@@ -2,6 +2,9 @@ import { Injectable, HttpException, HttpStatus, forwardRef, Inject } from '@nest
 import axios from 'axios';
 import * as crypto from 'crypto';
 import { OssArchiveService } from '../oss-archive/oss-archive.service';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as ffmpeg from 'fluent-ffmpeg';
 
 interface UploadUrlData {
   uploadUrl: string;
@@ -488,5 +491,80 @@ export class BackblazeService {
       throw new HttpException('大文件上传失败', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  // 提取视频封面
+  async extractFrame(videoPath: string, imagePath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      ffmpeg(videoPath)
+        .on('end', () =>resolve())
+        .on('error', reject)
+        .screenshots({
+          timestamps: ['00:00:01'],
+          filename: path.basename(imagePath),
+          folder: path.dirname(imagePath),
+        });
+    });
+  }
+
+  async uploadVideo(
+    videoFileName: string,
+    videoBuffer: Buffer,
+    contentType: string,
+  ): Promise<{
+    video: B2FileInfo;
+    thumbnail: B2FileInfo;
+  }> {
+    try {
+      console.log('开始上传视频:', videoFileName);
+      // 定义临时文件路径，去掉可能包含在文件名中的目录部分
+      const tempDir = path.join('/tmp', 'travel');
+      const safeFileName = path.basename(videoFileName); // 只获取文件名部分
+      const tempVideoPath = path.join(tempDir, safeFileName);
+      const thumbnailFileName = `${path.parse(safeFileName).name}_thumbnail.jpg`;
+      const tempThumbnailPath = path.join(tempDir, thumbnailFileName);
+
+      // 确保临时目录存在
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      // 将视频缓冲区写入临时文件
+      fs.writeFileSync(tempVideoPath, videoBuffer);
+
+      console.log('视频文件已保存到临时目录:', tempVideoPath);
+      // 提取封面图
+      await this.extractFrame(tempVideoPath, tempThumbnailPath);
+
+      console.log('封面图已提取:', tempThumbnailPath);
+      // 读取封面图文件
+      const thumbnailBuffer = fs.readFileSync(tempThumbnailPath);
+
+      // 上传视频和封面图
+      const videoUploadResult = await this.uploadFile(safeFileName, videoBuffer, contentType);
+      const thumbnailUploadResult = await this.uploadFile(thumbnailFileName, thumbnailBuffer, 'image/jpeg');
+
+      // 删除临时文件
+      try {
+        fs.unlinkSync(tempVideoPath);
+        fs.unlinkSync(tempThumbnailPath);
+      } catch (e) {
+        console.warn('清理临时文件失败:', e);
+      }
+
+      return {
+        video: videoUploadResult,
+        thumbnail: thumbnailUploadResult,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? (axios.isAxiosError(error) && error.response?.data ? String(error.response.data) : error.message)
+        : '未知错误';
+      console.error('视频上传失败:', errorMessage);
+      throw new HttpException('视频上传失败', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+
+
 }
 
