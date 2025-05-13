@@ -36,6 +36,7 @@ export class PostsService {
           authorId: post.authorId,
           quick_tag: mergeLines(existingPost.quick_tag, PendingLine),
           coverImage: post.coverImage || (post.images && post?.images[0]) || '',
+          location: post.location || '',
         });
       }
     }
@@ -115,7 +116,8 @@ export class PostsService {
     date: string;
     coverImage: string;
     quickTag: number;
-    author: { avatar: string | undefined; username: string }
+    author: { avatar: string | undefined; username: string };
+    location: string
   }>> {
     const [posts, total] = await this.postsRepository.findAndCount({
       where: {
@@ -128,6 +130,7 @@ export class PostsService {
         created_time: true,
         quick_tag: true,
         coverImage: true,
+        location: true,
         author: {
           avatar: true,
           username: true
@@ -149,6 +152,7 @@ export class PostsService {
         date: post.created_time.toISOString(),
         coverImage: post.coverImage,
         quickTag: post.quick_tag,
+        location: post.location,
         author: {
           avatar: post.author.avatar,
           username: post.author.username
@@ -319,6 +323,7 @@ export class PostsService {
         rejectReason: true,
         authorId: true,
         coverImage: true,
+        location: true,
         author: {
           id: true,
           username: true,
@@ -354,6 +359,7 @@ export class PostsService {
       rejectReason: post.rejectReason,
       coverImage: post.coverImage,
       quick_tag: post.quick_tag,
+      location: post.location,
       author: {
         avatar: post.author.avatar,
         username: post.author.username

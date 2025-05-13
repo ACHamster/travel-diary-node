@@ -42,6 +42,9 @@ export class PostEntity {
   @Column({ nullable: false })
   authorId: number;
 
+  @Column({ nullable: true})
+  location: string;
+
   @CreateDateColumn({ type: 'datetime2', default: () => 'GETDATE()' })
   created_time: Date;
 
