@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { PostsService } from './posts.service';
-import { CreatePostDTO, UpdatePostAuditDTO } from './posts.type';
+import { CreatePostDTO, UpdatePostAuditDTO, PaginationQuery } from './posts.type';
 import { AccessControl, AccessLevel } from '../../common/decorators/access-controll.decorator';
 import { UserGroupGuard } from '../../auth/guards/user-group.guard';
 import { UserGroups } from '../../common/decorators/user-group.decorator';
@@ -17,14 +17,18 @@ export class PostsController {
   @AccessControl(AccessLevel.REQUIRED_AUTH)
   // @UseGuards(UserGroupGuard)
   // @UserGroups("admin")
-  async getAllPosts() {
-    return await this.postsService.getAllPosts();
+  async getAllPosts(@Query() query: PaginationQuery) {
+    const page = query.page ? parseInt(query.page.toString()) : 1;
+    const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+    return await this.postsService.getAllPosts(page, limit);
   }
 
   @Get('list/approved')
   @AccessControl(AccessLevel.PUBLIC)
-  async getApprovedPosts() {
-    return await this.postsService.getApprovedPosts();
+  async getApprovedPosts(@Query() query: PaginationQuery) {
+    const page = query.page ? parseInt(query.page.toString()) : 1;
+    const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+    return await this.postsService.getApprovedPosts(page, limit);
   }
 
   @Get('my')
@@ -57,8 +61,6 @@ export class PostsController {
     createPostDto.authorId = user.sub;
     return this.postsService.createPost(createPostDto);
   }
-
-
 
   @Delete(':id')
   @AccessControl(AccessLevel.REQUIRED_AUTH)

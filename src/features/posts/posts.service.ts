@@ -2,8 +2,16 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PostEntity } from '../../entity/posts.entity';
 import { Repository, Like, Raw } from 'typeorm';
-import { CreatePostDTO, UpdatePostAuditDTO, PostResponse } from './posts.type';
-import { ApprovedLine, PendingLine, RejectedLine, mergeLines, removeLine, includeSomeLine } from '../../common/lib/quick-tag';
+import { CreatePostDTO, UpdatePostAuditDTO, PostResponse, PaginatedResponse } from './posts.type';
+import {
+  ApprovedLine,
+  PendingLine,
+  RejectedLine,
+  mergeLines,
+  removeLine,
+  includeSomeLine,
+  DeletedLine
+} from '../../common/lib/quick-tag';
 import { UserFavoritesEntity } from '../../entity/user-favorites.entity';
 
 @Injectable()
@@ -48,14 +56,16 @@ export class PostsService {
     return await this.postsRepository.save(obj);
   }
 
-  async getAllPosts(): Promise<{
+  async getAllPosts(page: number = 1, limit: number = 10): Promise<PaginatedResponse<{
     id: string;
     title: string;
     date: string;
     coverImage: string;
+    quickTag: number;
+    rejectReason: string;
     author: { avatar: string | undefined; username: string }
-  }[]> {
-    const posts = await this.postsRepository.find({
+  }>> {
+    const [posts, total] = await this.postsRepository.findAndCount({
       relations: ['author'],
       select: {
         id: true,
@@ -66,37 +76,48 @@ export class PostsService {
         rejectReason: true,
         author: {
           id: true,
-          username: true
+          username: true,
+          avatar: true
         }
       },
       order: {
         created_time: 'DESC',
       },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
-    return posts.map(post => ({
-      id: post.id.toString(),
-      title: post.title,
-      date: post.created_time.toISOString(),
-      coverImage: post.coverImage,
-      quickTag: post.quick_tag,
-      rejectReason: post.rejectReason,
-      author: {
-        avatar: post.author.avatar,
-        username: post.author.username
-      }
-    }));
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      items: posts.map(post => ({
+        id: post.id.toString(),
+        title: post.title,
+        date: post.created_time.toISOString(),
+        coverImage: post.coverImage,
+        quickTag: post.quick_tag,
+        rejectReason: post.rejectReason,
+        author: {
+          avatar: post.author.avatar,
+          username: post.author.username
+        }
+      })),
+      total,
+      page,
+      totalPages,
+      hasMore: page < totalPages
+    };
   }
 
-  async getApprovedPosts(): Promise<{
+  async getApprovedPosts(page: number = 1, limit: number = 10): Promise<PaginatedResponse<{
     id: string;
     title: string;
     date: string;
     coverImage: string;
     quickTag: number;
     author: { avatar: string | undefined; username: string }
-  }[]> {
-    const posts = await this.postsRepository.find({
+  }>> {
+    const [posts, total] = await this.postsRepository.findAndCount({
       where: {
         quick_tag: Raw(alias => `${alias} & ${ApprovedLine} = ${ApprovedLine}`)
       },
@@ -115,19 +136,29 @@ export class PostsService {
       order: {
         created_time: 'DESC',
       },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
-    return posts.map(post => ({
-      id: post.id.toString(),
-      title: post.title,
-      date: post.created_time.toISOString(),
-      coverImage: post.coverImage,
-      quickTag: post.quick_tag,
-      author: {
-        avatar: post.author.avatar,
-        username: post.author.username
-      }
-    }));
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      items: posts.map(post => ({
+        id: post.id.toString(),
+        title: post.title,
+        date: post.created_time.toISOString(),
+        coverImage: post.coverImage,
+        quickTag: post.quick_tag,
+        author: {
+          avatar: post.author.avatar,
+          username: post.author.username
+        }
+      })),
+      total,
+      page,
+      totalPages,
+      hasMore: page < totalPages
+    };
   }
 
   async getUserPosts(userId: number): Promise<PostResponse[]> {
@@ -246,6 +277,7 @@ export class PostsService {
     }
 
     let updatedQuickTag = post.quick_tag;
+    console.log('updatedQuickTag', updatedQuickTag);
     if (includeSomeLine(updatedQuickTag, ApprovedLine)) {
       updatedQuickTag = removeLine(updatedQuickTag, ApprovedLine);
     }
@@ -255,12 +287,11 @@ export class PostsService {
     if (includeSomeLine(updatedQuickTag, RejectedLine)) {
       updatedQuickTag = removeLine(updatedQuickTag, RejectedLine);
     }
-
-    if (auditData.rejectReason) {
-      updatedQuickTag = mergeLines(updatedQuickTag, RejectedLine);
-    } else {
-      updatedQuickTag = mergeLines(updatedQuickTag, ApprovedLine);
+    if(includeSomeLine(updatedQuickTag, DeletedLine)) {
+      updatedQuickTag = removeLine(updatedQuickTag, DeletedLine);
     }
+
+    updatedQuickTag = mergeLines(updatedQuickTag, auditData.auditStatus);
 
     return await this.postsRepository.update(id, {
       quick_tag: updatedQuickTag,

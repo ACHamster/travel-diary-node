@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserFavoritesEntity } from '../../entity/user-favorites.entity';
-import { log } from 'console';
 import { PostsService } from '../posts/posts.service';
 import { PostResponse } from '../posts/posts.type';
 

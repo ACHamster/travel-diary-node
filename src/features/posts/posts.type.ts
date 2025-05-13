@@ -29,6 +29,19 @@ export class UpdatePostAuditDTO {
   rejectReason?: string;
 }
 
+export interface PaginationQuery {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
 export interface PostResponse {
   id: string;
   title: string;
