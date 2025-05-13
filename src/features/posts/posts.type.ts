@@ -39,6 +39,7 @@ export interface PostResponse {
   rejectReason?: string;
   coverImage?: string; // 添加 coverImage 属性
   quick_tag?: number;  // 添加 quick_tag 属性
+  isFavorited?: boolean; // 添加 isFavorited 属性
   author: {
     avatar: string | undefined;
     username: string;

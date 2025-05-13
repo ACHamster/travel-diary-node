@@ -4,6 +4,7 @@ import { PostEntity } from '../../entity/posts.entity';
 import { Repository, Like, Raw } from 'typeorm';
 import { CreatePostDTO, UpdatePostAuditDTO, PostResponse } from './posts.type';
 import { ApprovedLine, PendingLine, RejectedLine, mergeLines, removeLine, includeSomeLine } from '../../common/lib/quick-tag';
+import { UserFavoritesEntity } from '../../entity/user-favorites.entity';
 
 @Injectable()
 export class PostsService {
@@ -185,7 +186,8 @@ export class PostsService {
         coverImage: true,
         author: {
           id: true,
-          username: true
+          username: true,
+          avatar: true,
         }
       },
     });
@@ -197,6 +199,14 @@ export class PostsService {
     if (!includeSomeLine(post.quick_tag, ApprovedLine) && post.authorId !== currentUserId) {
       console.log('没有权限查看该文章');
       return null;
+    }
+
+    let isFavorited = false;
+    if (currentUserId) {
+      const favoriteCount = await this.postsRepository.manager.count(UserFavoritesEntity, {
+        where: { userId: currentUserId.toString(), postId: id.toString() },
+      });
+      isFavorited = favoriteCount > 0;
     }
 
     return {
@@ -212,7 +222,8 @@ export class PostsService {
       author: {
         avatar: post.author.avatar,
         username: post.author.username
-      }
+      },
+      isFavorited,
     };
   }
 

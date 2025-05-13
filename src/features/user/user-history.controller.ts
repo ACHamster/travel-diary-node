@@ -17,7 +17,6 @@ export class UserHistoryController {
     if (!user?.sub) {
       throw new Error('User ID not found in request');
     }
-    console.log(data.recordId);
     this.userHistoryService.addHistory(user.sub.toString(), data.recordId);
   }
 
