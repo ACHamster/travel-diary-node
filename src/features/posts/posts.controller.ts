@@ -31,6 +31,22 @@ export class PostsController {
     return await this.postsService.getApprovedPosts(page, limit);
   }
 
+  @Get('list/rejected')
+  @AccessControl(AccessLevel.REQUIRED_AUTH)
+  async getRejectedPosts(@Query() query: PaginationQuery) {
+    const page = query.page ? parseInt(query.page.toString()) : 1;
+    const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+    return await this.postsService.getRejectedPosts(page, limit);
+  }
+
+  @Get('list/pending')
+  @AccessControl(AccessLevel.REQUIRED_AUTH)
+  async getPendingPosts(@Query() query: PaginationQuery) {
+    const page = query.page ? parseInt(query.page.toString()) : 1;
+    const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+    return await this.postsService.getPendingPosts(page, limit);
+  }
+
   @Get('my')
   @UseGuards(AuthGuard)
   @AccessControl(AccessLevel.REQUIRED_AUTH)

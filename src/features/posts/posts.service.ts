@@ -161,6 +161,110 @@ export class PostsService {
     };
   }
 
+  async getRejectedPosts(page: number = 1, limit: number = 10): Promise<PaginatedResponse<{
+    id: string;
+    title: string;
+    date: string;
+    coverImage: string;
+    quickTag: number;
+    author: { avatar: string | undefined; username: string }
+  }>> {
+    const [posts, total] = await this.postsRepository.findAndCount({
+      where: {
+        quick_tag: Raw(alias => `${alias} & ${RejectedLine} = ${RejectedLine}`)
+      },
+      relations: ['author'],
+      select: {
+        id: true,
+        title: true,
+        created_time: true,
+        quick_tag: true,
+        coverImage: true,
+        author: {
+          avatar: true,
+          username: true
+        }
+      },
+      order: {
+        created_time: 'DESC',
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      items: posts.map(post => ({
+        id: post.id.toString(),
+        title: post.title,
+        date: post.created_time.toISOString(),
+        coverImage: post.coverImage,
+        quickTag: post.quick_tag,
+        author: {
+          avatar: post.author.avatar,
+          username: post.author.username
+        }
+      })),
+      total,
+      page,
+      totalPages,
+      hasMore: page < totalPages
+    };
+  }
+
+  async getPendingPosts(page: number = 1, limit: number = 10): Promise<PaginatedResponse<{
+    id: string;
+    title: string;
+    date: string;
+    coverImage: string;
+    quickTag: number;
+    author: { avatar: string | undefined; username: string }
+  }>> {
+    const [posts, total] = await this.postsRepository.findAndCount({
+      where: {
+        quick_tag: Raw(alias => `${alias} & ${PendingLine} = ${PendingLine}`)
+      },
+      relations: ['author'],
+      select: {
+        id: true,
+        title: true,
+        created_time: true,
+        quick_tag: true,
+        coverImage: true,
+        author: {
+          avatar: true,
+          username: true
+        }
+      },
+      order: {
+        created_time: 'DESC',
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      items: posts.map(post => ({
+        id: post.id.toString(),
+        title: post.title,
+        date: post.created_time.toISOString(),
+        coverImage: post.coverImage,
+        quickTag: post.quick_tag,
+        author: {
+          avatar: post.author.avatar,
+          username: post.author.username
+        }
+      })),
+      total,
+      page,
+      totalPages,
+      hasMore: page < totalPages
+    };
+  }
+
   async getUserPosts(userId: number): Promise<PostResponse[]> {
     const posts = await this.postsRepository.find({
       where: { authorId: userId },
