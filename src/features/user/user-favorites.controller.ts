@@ -12,7 +12,6 @@ export class UserFavoritesController {
     @RequestUser() user: ActiveUserData,
     @Body('data') data: { postId: string },
   ) {
-    console.log(data.postId);
     if (!user?.sub) {
       throw new Error('User ID not found in request');
     }

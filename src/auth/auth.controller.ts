@@ -29,7 +29,7 @@ export class AuthController {
 
   @AccessControl(AccessLevel.PUBLIC)
   @Post('signin')
-  async signIn(@Body() user: SignInDTO, @Res({ passthrough: true }) response: Response) {
+  async signIn(@Body() user: SignInDTO) {
     return await this.authService.signIn(user);
   }
 

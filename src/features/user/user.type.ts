@@ -12,6 +12,9 @@ export class SignUpDTO {
 
   @ApiProperty({ description: '用户组'})
   userGroup?: string;
+
+  @ApiProperty({ description: '头像', required: false })
+  avatar?: string;
 }
 
 export class SignInDTO {

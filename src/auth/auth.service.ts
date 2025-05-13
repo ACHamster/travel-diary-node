@@ -26,14 +26,18 @@ export class AuthService {
   ) {}
 
   async signUp(user: SignUpDTO) {
-    const { email, username, password } = user;
+    const { email, username, password, avatar } = user;
 
     const emailValue = email ?? '';
     const usernameValue = username ?? '';
     const existingEmail = await this.usersService.findByEmail(emailValue);
     const existingUsername = await this.usersService.findByUsername(usernameValue);
     if(existingEmail || existingUsername) {
-      throw new UnauthorizedException("该用户已经被注册");
+      throw new UnauthorizedException({
+        message: '该用户已经被注册',
+        errorCode: 'USER_ALREADY_REGISTERED',
+      }
+      );
     }
 
     // 获取用户组实体
@@ -50,9 +54,10 @@ export class AuthService {
     const newUser = this.userRepository.create({
       email,
       username,
+      avatar,
       password: hashedPassword,
       userGroup: userGroup,
-      userGroupId: userGroup.id
+      userGroupId: userGroup.id,
     });
 
     return this.userRepository.save(newUser);
