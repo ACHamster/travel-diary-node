@@ -31,6 +31,14 @@ export class PostsController {
     return await this.postsService.getApprovedPosts(page, limit);
   }
 
+  @Get('list/approved/search')
+  @AccessControl(AccessLevel.PUBLIC)
+  async searchApprovedPosts(@Query('keyword') keyword: string, @Query() query: PaginationQuery) {
+    const page = query.page ? parseInt(query.page.toString()) : 1;
+    const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+    return await this.postsService.searchApprovedPosts(keyword, page, limit);
+  }
+
   @Get('list/rejected')
   @AccessControl(AccessLevel.REQUIRED_AUTH)
   async getRejectedPosts(@Query() query: PaginationQuery) {
