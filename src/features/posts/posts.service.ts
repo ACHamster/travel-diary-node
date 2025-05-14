@@ -13,6 +13,7 @@ import {
   DeletedLine, VideoLine
 } from '../../common/lib/quick-tag';
 import { UserFavoritesEntity } from '../../entity/user-favorites.entity';
+import { User } from '../../entity/user.entity';
 
 @Injectable()
 export class PostsService {
@@ -49,6 +50,7 @@ export class PostsService {
     obj.authorId = post.authorId;
     obj.quick_tag = PendingLine;
     obj.coverImage = post.coverImage || '';
+    obj.location = post.location || '';
 
     if(obj.video) {
       mergeLines(obj.quick_tag, VideoLine);
@@ -323,7 +325,7 @@ export class PostsService {
   async getPostById(id: number, currentUserId?: number): Promise<PostResponse | null> {
     const post = await this.postsRepository.findOne({
       where: { id },
-      relations: ['author'],
+      relations: ['author', 'author.userGroup'],
       select: {
         id: true,
         title: true,
@@ -340,6 +342,10 @@ export class PostsService {
           id: true,
           username: true,
           avatar: true,
+          userGroup: {
+            id: true,
+            name: true
+          }
         }
       },
     });
@@ -348,7 +354,18 @@ export class PostsService {
       return null;
     }
 
-    if (!includeSomeLine(post.quick_tag, ApprovedLine) && post.authorId !== currentUserId) {
+    // 添加用户组权限判断
+    const currentUser = currentUserId ? await this.postsRepository.manager.findOne(User, {
+      where: { id: currentUserId },
+      relations: ['userGroup'],
+    }) : null;
+
+    const isAdminOrReviewer = currentUser?.userGroup?.name === 'admin' || currentUser?.userGroup?.name === 'reviewer';
+
+    // ��章未通过审核，且不是作者本人或管理员/审核员，则无权查看
+    if (!includeSomeLine(post.quick_tag, ApprovedLine) &&
+      post.authorId !== currentUserId &&
+      !isAdminOrReviewer) {
       console.log('没有权限查看该文章');
       return null;
     }
@@ -399,7 +416,6 @@ export class PostsService {
     }
 
     let updatedQuickTag = post.quick_tag;
-    console.log('updatedQuickTag', updatedQuickTag);
     if (includeSomeLine(updatedQuickTag, ApprovedLine)) {
       updatedQuickTag = removeLine(updatedQuickTag, ApprovedLine);
     }
@@ -482,6 +498,10 @@ export class PostsService {
           quick_tag: Raw(alias => `${alias} & ${ApprovedLine} = ${ApprovedLine}`),
           location: Like(`%${keyword}%`),
         },
+        {
+          quick_tag: Raw(alias => `${alias} & ${ApprovedLine} = ${ApprovedLine}`),
+          author: { username: Like(`%${keyword}%`) },
+        },
       ],
       relations: ['author'],
       select: {
@@ -525,3 +545,4 @@ export class PostsService {
     };
   }
 }
+

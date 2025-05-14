@@ -70,12 +70,12 @@ export class AuthService {
     const existingUser = await this.usersService.findUserByEmailOrUsername(emailValue, usernameValue);
 
     if (!existingUser) {
-      throw new UnauthorizedException('用户不存在');
+      throw new UnauthorizedException('用户名或密码错误');
     }
 
     const isEqual = await this.hashingService.compare(password, existingUser.password);
     if (!isEqual) {
-      throw new UnauthorizedException('密码错误');
+      throw new UnauthorizedException('用户名或密码错误');
     }
 
     const userWithGroup = await this.usersService.findUserById(existingUser.id);

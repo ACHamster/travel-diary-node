@@ -97,7 +97,7 @@ export class PostsController {
   @Post(':id/audit')
   @AccessControl(AccessLevel.REQUIRED_AUTH)
   @UseGuards(UserGroupGuard)
-  @UserGroups("admin")
+  @UserGroups("admin", "reviewer")
   async updatePostAuditStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() auditData: UpdatePostAuditDTO
